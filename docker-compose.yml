@@ -4,6 +4,7 @@ services:
       context: .
     environment:
       - HOST_PWD=${PWD}
+      - ONESERVER_PWD=${PWD}/../oneserver
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../oneserver:/oneserver

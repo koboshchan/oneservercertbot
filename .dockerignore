@@ -6,3 +6,4 @@ package-lock.json
 .vscode
 .conda
 .ruff_cache
+cert
