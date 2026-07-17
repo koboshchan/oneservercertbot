@@ -73,13 +73,14 @@ for setting in settings:
     s = setting.copy()
     connection_type = s.get("type", "https-only")
     
-    # Skip error handlers for cert provisioning
-    if ":" in connection_type:
-        new_setting.append(s)
-        continue
+    is_error_handler = ":" in connection_type
+    if is_error_handler:
+        target_type = connection_type.split(":", 1)[1].strip()
+    else:
+        target_type = connection_type
 
     secure_types = ["https", "https-only", "static-https", "static-https-only", "redirect-temp", "redirect-perm"]
-    if connection_type in secure_types:
+    if target_type in secure_types:
         # Support both kebab-case (standard) and snake_case variants if present
         if "ca_bundle" in s or "ca-bundle" in s:
             key_ca = "ca_bundle" if "ca_bundle" in s else "ca-bundle"
@@ -93,7 +94,8 @@ for setting in settings:
         else:
             s["private-key"] = "privkey.pem"
 
-        domains.append(s["domain"])
+        if not is_error_handler:
+            domains.append(s["domain"])
     new_setting.append(s)
 
 with open("/oneserver/settings.json", "w") as f:
