@@ -51,21 +51,53 @@ except Exception:
 
 # 2. Update Settings
 with open("/oneserver/settings.json", "r") as f:
-    settings = json.load(f)
+    content = f.read()
+
+# Safe read stripping comments //
+lines = []
+for line in content.splitlines():
+    pos = line.find("//")
+    while pos != -1:
+        if pos > 0 and line[pos - 1] == ':':
+            pos = line.find("//", pos + 2)
+        else:
+            line = line[:pos]
+            break
+    lines.append(line)
+settings = json.loads("\n".join(lines))
 
 new_setting = []
 domains = []
 
 for setting in settings:
     s = setting.copy()
-    if s["type"] == "https":
-        s["ca-bundle"] = "fullchain.pem"
-        s["private-key"] = "privkey.pem"
+    connection_type = s.get("type", "https-only")
+    
+    # Skip error handlers for cert provisioning
+    if ":" in connection_type:
+        new_setting.append(s)
+        continue
+
+    secure_types = ["https", "https-only", "static-https", "static-https-only", "redirect-temp", "redirect-perm"]
+    if connection_type in secure_types:
+        # Support both kebab-case (standard) and snake_case variants if present
+        if "ca_bundle" in s or "ca-bundle" in s:
+            key_ca = "ca_bundle" if "ca_bundle" in s else "ca-bundle"
+            s[key_ca] = "fullchain.pem"
+        else:
+            s["ca-bundle"] = "fullchain.pem"
+
+        if "private_key" in s or "private-key" in s:
+            key_pk = "private_key" if "private_key" in s else "private-key"
+            s[key_pk] = "privkey.pem"
+        else:
+            s["private-key"] = "privkey.pem"
+
         domains.append(s["domain"])
     new_setting.append(s)
 
 with open("/oneserver/settings.json", "w") as f:
-    json.dump(new_setting, f)
+    json.dump(new_setting, f, indent=4)
 
 folder = '/app/cert'
 for filename in os.listdir(folder):
