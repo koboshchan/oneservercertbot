@@ -94,8 +94,11 @@ for setting in settings:
         else:
             s["private-key"] = "privkey.pem"
 
-        if not is_error_handler:
-            domains.append(s["domain"])
+        # Do NOT include in standalone request if it's an error handler OR a wildcard domain
+        domain = s.get("domain", "*")
+        is_wildcard = domain.startswith("*")
+        if not is_error_handler and not is_wildcard:
+            domains.append(domain)
     new_setting.append(s)
 
 with open("/oneserver/settings.json", "w") as f:
@@ -118,7 +121,10 @@ stream(chmod_certs())
 
 # 4. Copy certificates using the 'live' path (Avoids the '1.pem' issue)
 # Note: Inside THIS container, the path is /app/cert/...
-source_dir = f"/app/cert/live/{domains[0]}"
+cert_domain = domains[0]
+if cert_domain.startswith("*."):
+    cert_domain = cert_domain[2:]
+source_dir = f"/app/cert/live/{cert_domain}"
 dest_dir = "/oneserver/cert"
 
 os.makedirs(dest_dir, exist_ok=True)
